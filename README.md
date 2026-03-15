@@ -71,7 +71,20 @@ Handy includes an advanced debug mode for development and troubleshooting. Acces
 
 ### CLI Parameters
 
-Handy supports command-line flags for controlling a running instance and customizing startup behavior. These work on all platforms (macOS, Windows, Linux).
+Handy supports command-line flags for controlling a running instance, headless one-shot transcription, and customizing startup behavior. These work on all platforms (macOS, Windows, Linux).
+
+**Headless transcription mode** (no GUI, no tray, no single-instance routing):
+
+```bash
+handy --transcribe-file ./audio.wav
+handy --transcribe-file ./audio.wav --output-format json
+handy --transcribe-file ./audio.wav --model sense-voice-small --language zh
+```
+
+- `--transcribe-file` currently expects a WAV file with: 16kHz, 16-bit, mono PCM
+- `--output-format` supports `text` (default) and `json`
+- If `--model` / `--language` are omitted, Handy uses the current saved settings
+- `--model` and `--language` are temporary for that CLI call and are restored afterward
 
 **Remote control flags** (sent to an already-running instance via the single-instance plugin):
 

@@ -7,6 +7,7 @@ pub mod cli;
 mod clipboard;
 mod commands;
 mod helpers;
+mod headless_cli;
 mod input;
 mod llm_client;
 mod managers;
@@ -20,7 +21,7 @@ mod tray;
 mod tray_i18n;
 mod utils;
 
-pub use cli::CliArgs;
+pub use cli::{CliArgs, CliOutputFormat};
 #[cfg(debug_assertions)]
 use specta_typescript::{BigIntExportBehavior, Typescript};
 use tauri_specta::{collect_commands, Builder};
@@ -313,6 +314,11 @@ fn show_main_window_command(app: AppHandle) -> Result<(), String> {
 pub fn run(cli_args: CliArgs) {
     // Detect portable mode before anything else
     portable::init();
+
+    if cli_args.transcribe_file.is_some() {
+        headless_cli::run(cli_args);
+        return;
+    }
 
     // Parse console logging directives from RUST_LOG, falling back to info-level logging
     // when the variable is unset
