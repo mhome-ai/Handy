@@ -51,6 +51,10 @@ use crate::settings::get_settings;
 // We use u8 to store the log::LevelFilter as a number
 pub static FILE_LOG_LEVEL: AtomicU8 = AtomicU8::new(log::LevelFilter::Debug as u8);
 
+pub(crate) fn tauri_context() -> tauri::Context<tauri::Wry> {
+    tauri::generate_context!()
+}
+
 fn level_filter_from_u8(value: u8) -> log::LevelFilter {
     match value {
         0 => log::LevelFilter::Off,
@@ -579,7 +583,7 @@ pub fn run(cli_args: CliArgs) {
             _ => {}
         })
         .invoke_handler(specta_builder.invoke_handler())
-        .build(tauri::generate_context!())
+        .build(tauri_context())
         .expect("error while building tauri application")
         .run(|app, event| {
             #[cfg(target_os = "macos")]

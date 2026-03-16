@@ -1,4 +1,5 @@
 use crate::cli::{CliArgs, CliOutputFormat};
+use crate::tauri_context;
 use crate::managers::model::ModelManager;
 use crate::managers::transcription::TranscriptionManager;
 use crate::settings::{get_settings, write_settings, AppSettings};
@@ -89,10 +90,9 @@ pub fn run(cli_args: CliArgs) {
                 }
             };
 
-            app.handle().exit(exit_code);
-            Ok(())
+            std::process::exit(exit_code);
         })
-        .build(tauri::generate_context!())
+        .build(tauri_context())
         .expect("error while building headless CLI application");
 
     app.run(|_app_handle, _event| {});
@@ -163,6 +163,7 @@ fn transcribe_once(app_handle: &AppHandle, cli_args: &CliArgs) -> Result<OneShot
     })?;
 
     let text = transcription_manager.transcribe(audio)?;
+    std::mem::forget(transcription_manager);
 
     Ok(OneShotTranscriptionResult {
         text,
