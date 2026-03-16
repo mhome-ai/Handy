@@ -1,0 +1,11 @@
+[package]
+name = "handy-transcribe-lib"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+transcribe-rs = { version = "0.2.8", features = ["whisper", "parakeet", "moonshine", "sense_voice", "gigaam"] }
+ort = "=2.0.0-rc.10"
+ort-sys = "=2.0.0-rc.10"
