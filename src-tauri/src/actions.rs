@@ -494,7 +494,7 @@ impl ShortcutAction for TranscribeAction {
                 let samples_clone = samples.clone(); // Clone for history saving
                 let settings = get_settings(&ah);
                 let transcription_result = if settings.client_mode_enabled {
-                    tauri::async_runtime::block_on(transcribe_via_client_mode(&settings, &samples))
+                    transcribe_via_client_mode(&settings, &samples).await
                 } else {
                     tm.transcribe(samples)
                 };
