@@ -22,11 +22,6 @@ mod tray_i18n;
 mod utils;
 
 pub use cli::{CliArgs, CliOutputFormat};
-#[cfg(debug_assertions)]
-use specta_typescript::{BigIntExportBehavior, Typescript};
-use tauri_specta::{collect_commands, Builder};
-
-use env_filter::Builder as EnvFilterBuilder;
 use managers::audio::AudioRecordingManager;
 use managers::history::HistoryManager;
 use managers::model::ModelManager;
@@ -35,89 +30,25 @@ use managers::transcription::TranscriptionManager;
 use signal_hook::consts::{SIGUSR1, SIGUSR2};
 #[cfg(unix)]
 use signal_hook::iterator::Signals;
-use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::Arc;
 use tauri::image::Image;
+use tauri::{AppHandle, Emitter, Listener, Manager};
+use tauri::tray::TrayIconBuilder;
+use tauri_plugin_autostart::ManagerExt;
 pub use transcription_coordinator::TranscriptionCoordinator;
 
-use tauri::tray::TrayIconBuilder;
-use tauri::{AppHandle, Emitter, Listener, Manager};
-use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
-use tauri_plugin_log::{Builder as LogBuilder, RotationStrategy, Target, TargetKind};
-
-use crate::settings::get_settings;
-
 // Global atomic to store the file log level filter
-// We use u8 to store the log::LevelFilter as a number
-pub static FILE_LOG_LEVEL: AtomicU8 = AtomicU8::new(log::LevelFilter::Debug as u8);
+pub static FILE_LOG_LEVEL: std::sync::atomic::AtomicU8 =
+    std::sync::atomic::AtomicU8::new(log::LevelFilter::Debug as u8);
 
 pub(crate) fn tauri_context() -> tauri::Context<tauri::Wry> {
     tauri::generate_context!()
 }
 
-fn level_filter_from_u8(value: u8) -> log::LevelFilter {
-    match value {
-        0 => log::LevelFilter::Off,
-        1 => log::LevelFilter::Error,
-        2 => log::LevelFilter::Warn,
-        3 => log::LevelFilter::Info,
-        4 => log::LevelFilter::Debug,
-        5 => log::LevelFilter::Trace,
-        _ => log::LevelFilter::Trace,
-    }
-}
-
-fn build_console_filter() -> env_filter::Filter {
-    let mut builder = EnvFilterBuilder::new();
-
-    match std::env::var("RUST_LOG") {
-        Ok(spec) if !spec.trim().is_empty() => {
-            if let Err(err) = builder.try_parse(&spec) {
-                log::warn!(
-                    "Ignoring invalid RUST_LOG value '{}': {}. Falling back to info-level console logging",
-                    spec,
-                    err
-                );
-                builder.filter_level(log::LevelFilter::Info);
-            }
-        }
-        _ => {
-            builder.filter_level(log::LevelFilter::Info);
-        }
-    }
-
-    builder.build()
-}
-
-fn show_main_window(app: &AppHandle) {
-    if let Some(main_window) = app.get_webview_window("main") {
-        if let Err(e) = main_window.unminimize() {
-            log::error!("Failed to unminimize webview window: {}", e);
-        }
-        if let Err(e) = main_window.show() {
-            log::error!("Failed to show webview window: {}", e);
-        }
-        if let Err(e) = main_window.set_focus() {
-            log::error!("Failed to focus webview window: {}", e);
-        }
-        #[cfg(target_os = "macos")]
-        {
-            if let Err(e) = app.set_activation_policy(tauri::ActivationPolicy::Regular) {
-                log::error!("Failed to set activation policy to Regular: {}", e);
-            }
-        }
-        return;
-    }
-
-    let webview_labels = app.webview_windows().keys().cloned().collect::<Vec<_>>();
-    log::error!(
-        "Main window not found. Webview labels: {:?}",
-        webview_labels
-    );
-}
+fn show_main_window(_app: &AppHandle) {}
 
 #[allow(unused_variables)]
-fn should_force_show_permissions_window(app: &AppHandle) -> bool {
+fn should_force_show_permissions_window(app: &tauri::AppHandle) -> bool {
     #[cfg(target_os = "windows")]
     {
         let model_manager = app.state::<Arc<ModelManager>>();
