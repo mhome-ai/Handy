@@ -291,6 +291,10 @@ pub struct AppSettings {
     pub update_checks_enabled: bool,
     #[serde(default = "default_model")]
     pub selected_model: String,
+    #[serde(default)]
+    pub client_mode_enabled: bool,
+    #[serde(default = "default_client_mode_base_url")]
+    pub client_mode_base_url: String,
     #[serde(default = "default_always_on_microphone")]
     pub always_on_microphone: bool,
     #[serde(default)]
@@ -364,6 +368,10 @@ pub struct AppSettings {
 
 fn default_model() -> String {
     "".to_string()
+}
+
+fn default_client_mode_base_url() -> String {
+    "http://192.168.86.21:9999".to_string()
 }
 
 fn default_always_on_microphone() -> bool {
@@ -690,6 +698,8 @@ pub fn get_default_settings() -> AppSettings {
         autostart_enabled: default_autostart_enabled(),
         update_checks_enabled: default_update_checks_enabled(),
         selected_model: "".to_string(),
+        client_mode_enabled: false,
+        client_mode_base_url: default_client_mode_base_url(),
         always_on_microphone: false,
         selected_microphone: None,
         clamshell_microphone: None,

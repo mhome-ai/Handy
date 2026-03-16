@@ -4,30 +4,40 @@ import { SettingsGroup } from "../../ui/SettingsGroup";
 import { LanguageSelector } from "../LanguageSelector";
 import { TranslateToEnglish } from "../TranslateToEnglish";
 import { useModelStore } from "../../../stores/modelStore";
+import { useSettingsStore } from "../../../stores/settingsStore";
 import type { ModelInfo } from "@/bindings";
 
 export const ModelSettingsCard: React.FC = () => {
   const { t } = useTranslation();
   const { currentModel, models } = useModelStore();
+  const clientModeEnabled = useSettingsStore((state) =>
+    state.settings?.client_mode_enabled ?? false,
+  );
 
   const currentModelInfo = models.find((m: ModelInfo) => m.id === currentModel);
 
   const supportsLanguageSelection =
+    clientModeEnabled ||
     currentModelInfo?.engine_type === "Whisper" ||
     currentModelInfo?.engine_type === "SenseVoice";
-  const supportsTranslation = currentModelInfo?.supports_translation ?? false;
+  const supportsTranslation =
+    clientModeEnabled || (currentModelInfo?.supports_translation ?? false);
   const hasAnySettings = supportsLanguageSelection || supportsTranslation;
 
-  // Don't render anything if no model is selected or no settings available
-  if (!currentModel || !currentModelInfo || !hasAnySettings) {
+  // In client mode, keep language/translation settings even without a local model.
+  if (!clientModeEnabled && (!currentModel || !currentModelInfo || !hasAnySettings)) {
     return null;
   }
 
   return (
     <SettingsGroup
-      title={t("settings.modelSettings.title", {
-        model: currentModelInfo.name,
-      })}
+      title={
+        clientModeEnabled
+          ? "Transcription Settings"
+          : t("settings.modelSettings.title", {
+              model: currentModelInfo?.name || "",
+            })
+      }
     >
       {supportsLanguageSelection && (
         <LanguageSelector

@@ -339,6 +339,8 @@ pub fn run(cli_args: CliArgs) {
         shortcut::change_autostart_setting,
         shortcut::change_translate_to_english_setting,
         shortcut::change_selected_language_setting,
+        shortcut::change_client_mode_enabled_setting,
+        shortcut::change_client_mode_base_url_setting,
         shortcut::change_overlay_position_setting,
         shortcut::change_debug_mode_setting,
         shortcut::change_word_correction_threshold_setting,

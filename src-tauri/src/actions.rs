@@ -1,6 +1,7 @@
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 use crate::apple_intelligence;
 use crate::audio_feedback::{play_feedback_sound, play_feedback_sound_blocking, SoundType};
+use crate::audio_toolkit::save_wav_file;
 use crate::managers::audio::AudioRecordingManager;
 use crate::managers::history::HistoryManager;
 use crate::managers::transcription::TranscriptionManager;
@@ -13,6 +14,7 @@ use crate::utils::{
 use crate::TranscriptionCoordinator;
 use ferrous_opencc::{config::BuiltinConfig, OpenCC};
 use log::{debug, error, warn};
+use serde::Deserialize;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -45,6 +47,11 @@ struct TranscribeAction {
 /// Field name for structured output JSON schema
 const TRANSCRIPTION_FIELD: &str = "transcription";
 
+#[derive(Debug, Deserialize)]
+struct ClientModeTranscriptionResponse {
+    text: String,
+}
+
 /// Strip invisible Unicode characters that some LLMs may insert
 fn strip_invisible_chars(s: &str) -> String {
     s.replace(['\u{200B}', '\u{200C}', '\u{200D}', '\u{FEFF}'], "")
@@ -54,6 +61,58 @@ fn strip_invisible_chars(s: &str) -> String {
 /// Removes `${output}` placeholder since the transcription is sent as the user message.
 fn build_system_prompt(prompt_template: &str) -> String {
     prompt_template.replace("${output}", "").trim().to_string()
+}
+
+async fn transcribe_via_client_mode(
+    settings: &AppSettings,
+    samples: &[f32],
+) -> anyhow::Result<String> {
+    let base_url = settings.client_mode_base_url.trim().trim_end_matches('/');
+    if base_url.is_empty() {
+        anyhow::bail!("Client Mode is enabled but remote URL is empty");
+    }
+
+    let temp_path = std::env::temp_dir().join(format!(
+        "handy-client-mode-{}.wav",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)?
+            .as_millis()
+    ));
+
+    save_wav_file(&temp_path, samples).await?;
+    let wav_bytes = tokio::fs::read(&temp_path).await?;
+    let _ = tokio::fs::remove_file(&temp_path).await;
+
+    let model = if settings.selected_model.trim().is_empty() {
+        "turbo".to_string()
+    } else {
+        settings.selected_model.clone()
+    };
+    let language = settings.selected_language.clone();
+    let url = format!(
+        "{}/v1/transcribe?model={}&language={}",
+        base_url, model, language
+    );
+
+    let part = reqwest::multipart::Part::bytes(wav_bytes)
+        .file_name("input.wav")
+        .mime_str("audio/wav")?;
+    let form = reqwest::multipart::Form::new().part("file", part);
+
+    let response = reqwest::Client::new()
+        .post(url)
+        .multipart(form)
+        .send()
+        .await?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
+        anyhow::bail!("Remote transcription failed: {} {}", status, body);
+    }
+
+    let payload: ClientModeTranscriptionResponse = response.json().await?;
+    Ok(payload.text)
 }
 
 async fn post_process_transcription(settings: &AppSettings, transcription: &str) -> Option<String> {
@@ -433,7 +492,13 @@ impl ShortcutAction for TranscribeAction {
 
                 let transcription_time = Instant::now();
                 let samples_clone = samples.clone(); // Clone for history saving
-                match tm.transcribe(samples) {
+                let settings = get_settings(&ah);
+                let transcription_result = if settings.client_mode_enabled {
+                    tauri::async_runtime::block_on(transcribe_via_client_mode(&settings, &samples))
+                } else {
+                    tm.transcribe(samples)
+                };
+                match transcription_result {
                     Ok(transcription) => {
                         debug!(
                             "Transcription completed in {:?}: '{}'",
