@@ -524,14 +524,37 @@ impl TranscriptionManager {
                                 Some(normalized)
                             };
 
+                            let initial_prompt = {
+                                let mut parts: Vec<String> = Vec::new();
+
+                                if settings.selected_language == "zh-Hans"
+                                    || settings.selected_language == "zh-Hant"
+                                    || settings.selected_language == "zh"
+                                    || settings.selected_language == "auto"
+                                {
+                                    parts.push(
+                                        "The transcript is mainly in Chinese, but may include English words, product names, and technical terms. Use natural Chinese punctuation when appropriate, including ， 。 ？ ！ and quotation marks when needed. Preserve the original meaning and wording as much as possible.".to_string(),
+                                    );
+                                }
+
+                                if !settings.custom_words.is_empty() {
+                                    parts.push(format!(
+                                        "Prefer these domain terms when relevant: {}",
+                                        settings.custom_words.join(", ")
+                                    ));
+                                }
+
+                                if parts.is_empty() {
+                                    None
+                                } else {
+                                    Some(parts.join(" "))
+                                }
+                            };
+
                             let params = WhisperInferenceParams {
                                 language: whisper_language,
                                 translate: settings.translate_to_english,
-                                initial_prompt: if settings.custom_words.is_empty() {
-                                    None
-                                } else {
-                                    Some(settings.custom_words.join(", "))
-                                },
+                                initial_prompt,
                                 ..Default::default()
                             };
 
