@@ -37,6 +37,7 @@ if [ -d "/Applications/Footy.app" ]; then
   echo "launching installed Footy.app"
   open -a "/Applications/Footy.app"
 else
-  echo "Footy.app not found in /Applications, starting from repo"
-  npm run tauri dev
+  echo "Footy.app not found in /Applications"
+  echo "Please install Footy.app first, then run this script again."
+  exit 1
 fi
