@@ -89,7 +89,7 @@ pub fn run(cli_args: CliArgs) {
                 }
             };
 
-            app.exit(exit_code);
+            app.handle().exit(exit_code);
             Ok(())
         })
         .build(tauri::generate_context!())
