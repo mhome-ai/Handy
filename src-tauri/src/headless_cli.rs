@@ -1,8 +1,8 @@
 use crate::cli::{CliArgs, CliOutputFormat};
 use crate::tauri_context;
 use crate::managers::model::ModelManager;
-use crate::managers::transcription::TranscriptionManager;
 use crate::settings::{get_settings, write_settings, AppSettings};
+use handy_transcribe_lib::transcribe_wav_file;
 use anyhow::{anyhow, Result};
 use serde::Serialize;
 use std::path::Path;
@@ -217,25 +217,13 @@ fn transcribe_once(app_handle: &AppHandle, cli_args: &CliArgs) -> Result<OneShot
         ));
     }
 
-    let transcription_manager = TranscriptionManager::new(app_handle, model_manager)?;
-    transcription_manager.load_model(&selected_model)?;
-
-    let audio = transcribe_rs::audio::read_wav_samples(audio_path).map_err(|e| {
-        anyhow!(
-            "Failed to read audio file '{}': {}. Expected 16kHz, 16-bit, mono PCM WAV.",
-            audio_path.display(),
-            e
-        )
-    })?;
-
-    let text = transcription_manager.transcribe(audio)?;
-    std::mem::forget(transcription_manager);
+    let output = transcribe_wav_file(&selected_model, &effective_settings.selected_language, audio_path)?;
 
     Ok(OneShotTranscriptionResult {
-        text,
-        model: selected_model,
-        language: effective_settings.selected_language,
-        file: audio_path.to_string_lossy().to_string(),
+        text: output.text,
+        model: output.model,
+        language: output.language,
+        file: output.file,
     })
 }
 

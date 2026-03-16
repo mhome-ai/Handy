@@ -2430,6 +2430,7 @@ dependencies = [
  "gtk",
  "gtk-layer-shell",
  "handy-keys",
+ "handy-transcribe-lib",
  "hound",
  "log",
  "natural",
@@ -2491,6 +2492,17 @@ dependencies = [
  "serde",
  "thiserror 2.0.18",
  "windows 0.58.0",
+]
+
+[[package]]
+name = "handy-transcribe-lib"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ort",
+ "ort-sys",
+ "serde",
+ "transcribe-rs",
 ]
 
 [[package]]
