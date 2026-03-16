@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Handy",
+  "productName": "Footy",
   "version": "0.7.10",
-  "identifier": "com.pais.handy",
+  "identifier": "ai.mhome.footy",
   "build": {
     "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:1420",
