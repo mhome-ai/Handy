@@ -47,6 +47,10 @@ pub struct CliArgs {
     #[arg(long)]
     pub cancel: bool,
 
+    /// List locally available models and exit
+    #[arg(long)]
+    pub list_models: bool,
+
     /// Enable debug mode with verbose logging
     #[arg(long)]
     pub debug: bool,

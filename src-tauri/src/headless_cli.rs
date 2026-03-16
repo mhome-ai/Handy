@@ -22,6 +22,14 @@ struct JsonErrorOutput {
     error: String,
 }
 
+#[derive(Serialize)]
+struct JsonModelOutput {
+    id: String,
+    name: String,
+    downloaded: bool,
+    selected: bool,
+}
+
 struct SettingsRestoreGuard {
     app_handle: AppHandle,
     original_settings: AppSettings,
@@ -52,41 +60,63 @@ pub fn run(cli_args: CliArgs) {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::default().build())
         .setup(move |app| {
-            let exit_code = match transcribe_once(&app.handle(), &cli_args_for_setup) {
-                Ok(result) => {
-                    match cli_args_for_setup.output_format {
-                        CliOutputFormat::Text => println!("{}", result.text),
-                        CliOutputFormat::Json => {
-                            let output = JsonTranscriptionOutput {
-                                text: result.text,
-                                model: result.model,
-                                language: result.language,
-                                file: result.file,
-                            };
-                            println!(
-                                "{}",
-                                serde_json::to_string(&output)
-                                    .expect("Failed to serialize transcription JSON output")
-                            );
+            let exit_code = if cli_args_for_setup.list_models {
+                match list_models(&app.handle(), cli_args_for_setup.output_format) {
+                    Ok(()) => 0,
+                    Err(err) => {
+                        match cli_args_for_setup.output_format {
+                            CliOutputFormat::Text => eprintln!("Error: {}", err),
+                            CliOutputFormat::Json => {
+                                let output = JsonErrorOutput {
+                                    error: err.to_string(),
+                                };
+                                eprintln!(
+                                    "{}",
+                                    serde_json::to_string(&output)
+                                        .expect("Failed to serialize error JSON output")
+                                );
+                            }
                         }
+                        1
                     }
-                    0
                 }
-                Err(err) => {
-                    match cli_args_for_setup.output_format {
-                        CliOutputFormat::Text => eprintln!("Error: {}", err),
-                        CliOutputFormat::Json => {
-                            let output = JsonErrorOutput {
-                                error: err.to_string(),
-                            };
-                            eprintln!(
-                                "{}",
-                                serde_json::to_string(&output)
-                                    .expect("Failed to serialize error JSON output")
-                            );
+            } else {
+                match transcribe_once(&app.handle(), &cli_args_for_setup) {
+                    Ok(result) => {
+                        match cli_args_for_setup.output_format {
+                            CliOutputFormat::Text => println!("{}", result.text),
+                            CliOutputFormat::Json => {
+                                let output = JsonTranscriptionOutput {
+                                    text: result.text,
+                                    model: result.model,
+                                    language: result.language,
+                                    file: result.file,
+                                };
+                                println!(
+                                    "{}",
+                                    serde_json::to_string(&output)
+                                        .expect("Failed to serialize transcription JSON output")
+                                );
+                            }
                         }
+                        0
                     }
-                    1
+                    Err(err) => {
+                        match cli_args_for_setup.output_format {
+                            CliOutputFormat::Text => eprintln!("Error: {}", err),
+                            CliOutputFormat::Json => {
+                                let output = JsonErrorOutput {
+                                    error: err.to_string(),
+                                };
+                                eprintln!(
+                                    "{}",
+                                    serde_json::to_string(&output)
+                                        .expect("Failed to serialize error JSON output")
+                                );
+                            }
+                        }
+                        1
+                    }
                 }
             };
 
@@ -103,6 +133,42 @@ struct OneShotTranscriptionResult {
     model: String,
     language: String,
     file: String,
+}
+
+fn list_models(app_handle: &AppHandle, output_format: CliOutputFormat) -> Result<()> {
+    let model_manager = ModelManager::new(app_handle)?;
+    let selected_model = get_settings(app_handle).selected_model;
+
+    let mut models = model_manager.get_available_models();
+    models.sort_by(|a, b| a.id.cmp(&b.id));
+
+    match output_format {
+        CliOutputFormat::Text => {
+            for model in models.iter().filter(|m| m.is_downloaded) {
+                let selected_marker = if model.id == selected_model { " *selected" } else { "" };
+                println!("{}\t{}{}", model.id, model.name, selected_marker);
+            }
+        }
+        CliOutputFormat::Json => {
+            let output: Vec<JsonModelOutput> = models
+                .into_iter()
+                .filter(|m| m.is_downloaded)
+                .map(|m| JsonModelOutput {
+                    selected: m.id == selected_model,
+                    id: m.id,
+                    name: m.name,
+                    downloaded: m.is_downloaded,
+                })
+                .collect();
+            println!(
+                "{}",
+                serde_json::to_string(&output)
+                    .expect("Failed to serialize model list JSON output")
+            );
+        }
+    }
+
+    Ok(())
 }
 
 fn transcribe_once(app_handle: &AppHandle, cli_args: &CliArgs) -> Result<OneShotTranscriptionResult> {
