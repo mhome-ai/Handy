@@ -74,6 +74,24 @@ const AccessibilityOnboarding: React.FC<AccessibilityOnboardingProps> = ({
     return microphoneStatus.overall_access !== "denied";
   }, []);
 
+  const hasMacAccessibilityAccess = useCallback(async (): Promise<boolean> => {
+    try {
+      if (await checkAccessibilityPermission()) {
+        return true;
+      }
+    } catch (error) {
+      console.warn("checkAccessibilityPermission failed:", error);
+    }
+
+    try {
+      const result = await commands.initializeEnigo();
+      return result.status === "ok";
+    } catch (error) {
+      console.warn("initializeEnigo probe failed:", error);
+      return false;
+    }
+  }, []);
+
   // Check platform and permission status on mount
   useEffect(() => {
     const currentPlatform = platform();
@@ -96,7 +114,7 @@ const AccessibilityOnboarding: React.FC<AccessibilityOnboardingProps> = ({
       if (nextPlatform === "macos") {
         try {
           const [accessibilityGranted, microphoneGranted] = await Promise.all([
-            checkAccessibilityPermission(),
+            hasMacAccessibilityAccess(),
             checkMicrophonePermission(),
           ]);
 
@@ -156,7 +174,7 @@ const AccessibilityOnboarding: React.FC<AccessibilityOnboardingProps> = ({
     };
 
     checkInitial();
-  }, [completeOnboarding, hasWindowsMicrophoneAccess, onComplete, t]);
+  }, [completeOnboarding, hasMacAccessibilityAccess, hasWindowsMicrophoneAccess, onComplete, t]);
 
   // Polling for permissions after user clicks a button
   const startPolling = useCallback(() => {
@@ -183,7 +201,7 @@ const AccessibilityOnboarding: React.FC<AccessibilityOnboardingProps> = ({
         }
 
         const [accessibilityGranted, microphoneGranted] = await Promise.all([
-          checkAccessibilityPermission(),
+          hasMacAccessibilityAccess(),
           checkMicrophonePermission(),
         ]);
 
@@ -233,7 +251,7 @@ const AccessibilityOnboarding: React.FC<AccessibilityOnboardingProps> = ({
         }
       }
     }, 1000);
-  }, [completeOnboarding, hasWindowsMicrophoneAccess, permissionPlatform, t]);
+  }, [completeOnboarding, hasMacAccessibilityAccess, hasWindowsMicrophoneAccess, permissionPlatform, t]);
 
   // Cleanup polling and timeouts on unmount
   useEffect(() => {
