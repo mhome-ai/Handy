@@ -4,7 +4,7 @@ set -eu
 BASE_URL="${1:-http://192.168.86.21:9999}"
 APP_SUPPORT_DIR="$HOME/Library/Application Support/ai.mhome.footy"
 SETTINGS_PATH="$APP_SUPPORT_DIR/settings_store.json"
-REPO_DIR="/Users/alimao/.openclaw/workspace/handy"
+REPO_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 
 mkdir -p "$APP_SUPPORT_DIR"
 
