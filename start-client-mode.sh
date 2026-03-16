@@ -1,19 +1,20 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/usr/bin/env sh
+set -eu
 
 BASE_URL="${1:-http://192.168.86.21:9999}"
-APP_SUPPORT_DIR="$HOME/Library/Application Support/com.pais.handy"
+APP_SUPPORT_DIR="$HOME/Library/Application Support/ai.mhome.footy"
 SETTINGS_PATH="$APP_SUPPORT_DIR/settings_store.json"
 REPO_DIR="/Users/alimao/.openclaw/workspace/handy"
 
 mkdir -p "$APP_SUPPORT_DIR"
 
-python3 - <<PY
+SETTINGS_PATH="$SETTINGS_PATH" BASE_URL="$BASE_URL" python3 - <<'PY'
 import json
+import os
 from pathlib import Path
 
-settings_path = Path(${SETTINGS_PATH@Q})
-base_url = ${BASE_URL@Q}
+settings_path = Path(os.environ['SETTINGS_PATH'])
+base_url = os.environ['BASE_URL']
 
 if settings_path.exists():
     try:
@@ -32,10 +33,10 @@ PY
 
 cd "$REPO_DIR"
 
-if [ -d "/Applications/Handy.app" ]; then
-  echo "launching installed Handy.app"
-  open -a "/Applications/Handy.app"
+if [ -d "/Applications/Footy.app" ]; then
+  echo "launching installed Footy.app"
+  open -a "/Applications/Footy.app"
 else
-  echo "Handy.app not found in /Applications, starting from repo"
+  echo "Footy.app not found in /Applications, starting from repo"
   npm run tauri dev
 fi
