@@ -21,6 +21,15 @@ fn generate_tray_translations() {
 
     println!("cargo:rerun-if-changed=../src/i18n/locales");
 
+    if !locales_dir.exists() {
+        let out = String::from(
+            "// Auto-generated fallback for CLI-only build\n\n#[derive(Debug, Clone)]\npub struct TrayStrings {\n    pub settings: String,\n    pub check_updates: String,\n    pub copy_last_transcript: String,\n    pub quit: String,\n    pub model: String,\n    pub unload_model: String,\n    pub cancel: String,\n}\n\npub static TRANSLATIONS: Lazy<HashMap<&'static str, TrayStrings>> = Lazy::new(|| {\n    let mut m = HashMap::new();\n    m.insert(\"en\", TrayStrings {\n        settings: \"Settings\".to_string(),\n        check_updates: \"Check for Updates\".to_string(),\n        copy_last_transcript: \"Copy Last Transcript\".to_string(),\n        quit: \"Quit\".to_string(),\n        model: \"Model\".to_string(),\n        unload_model: \"Unload Model\".to_string(),\n        cancel: \"Cancel\".to_string(),\n    });\n    m\n});\n",
+        );
+        fs::write(Path::new(&out_dir).join("tray_translations.rs"), out).unwrap();
+        println!("cargo:warning=Frontend locales missing; generated stub tray translations for CLI-only build");
+        return;
+    }
+
     // Collect all locale translations
     let mut translations: BTreeMap<String, serde_json::Value> = BTreeMap::new();
 

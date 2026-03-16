@@ -319,10 +319,9 @@ pub fn run(cli_args: CliArgs) {
     // Detect portable mode before anything else
     portable::init();
 
-    if cli_args.transcribe_file.is_some() {
-        headless_cli::run(cli_args);
-        return;
-    }
+    // Server repo is now CLI-only / headless-only.
+    headless_cli::run(cli_args);
+    return;
 
     // Parse console logging directives from RUST_LOG, falling back to info-level logging
     // when the variable is unset
